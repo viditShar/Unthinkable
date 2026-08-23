@@ -114,11 +114,11 @@ const AppointmentDetail = () => {
               <span style={{ color: 'var(--text-muted)' }}>Chief Complaint: </span>{appt.chiefComplaint}
             </p>
           )}
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
             {appt.preVisitSummary
               ? <div className="markdown"><ReactMarkdown>{appt.preVisitSummary}</ReactMarkdown></div>
               : <span style={{ fontStyle: 'italic', color: 'var(--text-subtle)' }}>AI summary could not be generated.</span>}
-          </p>
+          </div>
         </div>
       )}
 
