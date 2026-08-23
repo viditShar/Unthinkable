@@ -87,7 +87,7 @@ const CreateDoctor = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div style={{ gridColumn: '1 / -1' }}>
               <Field label="Full Name *" error={errors.name}>
-                <input value={form.name} onChange={e => { set('name', e.target.value); clearErr('name') }} className="input" style={inputStyle(!!errors.name)} placeholder="Dr. Jane Doe" />
+                <input value={form.name} onChange={e => { set('name', e.target.value); clearErr('name') }} className="input" style={inputStyle(!!errors.name)} placeholder="Jane Doe" />
               </Field>
             </div>
             <Field label="Email *" error={errors.email}>

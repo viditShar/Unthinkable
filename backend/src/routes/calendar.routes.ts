@@ -1,10 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { getAuthUrl } from '../services/calendar.service';
+import { authenticate, authorize } from '../middleware/auth.middleware';
 import { google } from 'googleapis';
 
 const router = Router();
 
-router.get('/auth', (_req: Request, res: Response) => {
+// Both routes protected — only admin can trigger the Google OAuth flow
+router.get('/auth', authenticate, authorize('ADMIN'), (_req: Request, res: Response) => {
   const url = getAuthUrl();
   res.json({ success: true, url });
 });

@@ -112,16 +112,37 @@ export const sendCancellationEmail = async (appointment: any): Promise<void> => 
   await sendEmail(
     appointment.patient.user.email,
     'Appointment Cancelled',
-    `<h2>Appointment Cancelled</h2>
-    <p>Your appointment with Dr. ${appointment.doctor.user.name} on ${time} has been cancelled.</p>`,
+    `<div style="max-width:600px;margin:0 auto;font-family:sans-serif;">
+      <div style="background:#ef4444;padding:20px 24px;border-radius:8px 8px 0 0;">
+        <h2 style="color:#fff;margin:0;font-size:18px;">Appointment Cancelled</h2>
+      </div>
+      <div style="background:#ffffff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="font-size:14px;color:#475569;margin:0 0 16px;">Hi ${appointment.patient.user.name},</p>
+        <div style="background:#fef2f2;padding:16px;border-radius:8px;border:1px solid #fecaca;margin-bottom:16px;">
+          <p style="margin:0 0 8px;font-size:13px;"><strong>Doctor:</strong> Dr. ${appointment.doctor.user.name}</p>
+          <p style="margin:0;font-size:13px;"><strong>Date &amp; Time:</strong> ${time}</p>
+        </div>
+        <p style="font-size:13px;color:#64748b;margin:0;">Your appointment has been cancelled. Please log in to rebook.</p>
+      </div>
+    </div>`,
     appointment.id
   );
 
   await sendEmail(
     appointment.doctor.user.email,
     'Appointment Cancelled',
-    `<h2>Appointment Cancelled</h2>
-    <p>The appointment with ${appointment.patient.user.name} on ${time} has been cancelled.</p>`,
+    `<div style="max-width:600px;margin:0 auto;font-family:sans-serif;">
+      <div style="background:#ef4444;padding:20px 24px;border-radius:8px 8px 0 0;">
+        <h2 style="color:#fff;margin:0;font-size:18px;">Appointment Cancelled</h2>
+      </div>
+      <div style="background:#ffffff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="font-size:14px;color:#475569;margin:0 0 16px;">Hi Dr. ${appointment.doctor.user.name},</p>
+        <div style="background:#fef2f2;padding:16px;border-radius:8px;border:1px solid #fecaca;">
+          <p style="margin:0 0 8px;font-size:13px;"><strong>Patient:</strong> ${appointment.patient.user.name}</p>
+          <p style="margin:0;font-size:13px;"><strong>Date &amp; Time:</strong> ${time}</p>
+        </div>
+      </div>
+    </div>`,
     appointment.id
   );
 };
@@ -132,10 +153,21 @@ export const sendAppointmentCancellationDueToLeave = async (appointment: any): P
   await sendEmail(
     appointment.patient.user.email,
     'Appointment Cancelled – Doctor on Leave',
-    `<h2>Important: Appointment Cancelled</h2>
-    <p>Hi ${appointment.patient.user.name},</p>
-    <p>Your appointment with <strong>Dr. ${appointment.doctor.user.name}</strong> on <strong>${time}</strong> has been cancelled as the doctor will be on leave.</p>
-    <p>Please log in to rebook at your convenience.</p>`,
+    `<div style="max-width:600px;margin:0 auto;font-family:sans-serif;">
+      <div style="background:#f59e0b;padding:20px 24px;border-radius:8px 8px 0 0;">
+        <h2 style="color:#fff;margin:0;font-size:18px;">Important: Appointment Cancelled</h2>
+      </div>
+      <div style="background:#ffffff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="font-size:14px;color:#475569;margin:0 0 16px;">Hi ${appointment.patient.user.name},</p>
+        <p style="font-size:14px;color:#1a1a1a;margin:0 0 16px;">Your upcoming appointment has been cancelled because <strong>Dr. ${appointment.doctor.user.name}</strong> will be on leave that day.</p>
+        <div style="background:#fffbeb;padding:16px;border-radius:8px;border:1px solid #fde68a;margin-bottom:16px;">
+          <p style="margin:0 0 8px;font-size:13px;"><strong>Doctor:</strong> Dr. ${appointment.doctor.user.name}</p>
+          <p style="margin:0;font-size:13px;"><strong>Original Date &amp; Time:</strong> ${time}</p>
+        </div>
+        <p style="font-size:14px;color:#1a1a1a;margin:0 0 8px;">Please log in to book a new appointment at a different date.</p>
+        <p style="font-size:13px;color:#64748b;margin:0;">We apologise for the inconvenience.</p>
+      </div>
+    </div>`,
     appointment.id
   );
 };
@@ -213,9 +245,18 @@ export const sendMedicationReminder = async (
   await sendEmail(
     patientEmail,
     `Medication Reminder: ${medication}`,
-    `<h2>Medication Reminder</h2>
-    <p>Hi ${patientName},</p>
-    <p>Time to take your medication: <strong>${medication}</strong>.</p>`,
+    `<div style="max-width:600px;margin:0 auto;font-family:sans-serif;">
+      <div style="background:#10b981;padding:20px 24px;border-radius:8px 8px 0 0;">
+        <h2 style="color:#fff;margin:0;font-size:18px;">💊 Medication Reminder</h2>
+      </div>
+      <div style="background:#ffffff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="font-size:14px;color:#475569;margin:0 0 16px;">Hi ${patientName},</p>
+        <div style="background:#f0fdf4;padding:16px;border-radius:8px;border:1px solid #bbf7d0;margin-bottom:16px;">
+          <p style="margin:0;font-size:15px;font-weight:600;color:#15803d;">Time to take: ${medication}</p>
+        </div>
+        <p style="font-size:13px;color:#64748b;margin:0;">Stay consistent with your medication schedule for the best results.</p>
+      </div>
+    </div>`,
     appointmentId
   );
 };
