@@ -140,6 +140,70 @@ export const sendAppointmentCancellationDueToLeave = async (appointment: any): P
   );
 };
 
+export const sendAppointmentCancellationDueToRemoval = async (appointment: any): Promise<void> => {
+  const time = formatDate(appointment.scheduledAt);
+
+  await sendEmail(
+    appointment.patient.user.email,
+    'Appointment Cancelled – Doctor No Longer Available',
+    `<div style="max-width:600px;margin:0 auto;font-family:sans-serif;">
+      <div style="background:#ef4444;padding:20px 24px;border-radius:8px 8px 0 0;">
+        <h2 style="color:#fff;margin:0;font-size:18px;">Important: Appointment Cancelled</h2>
+      </div>
+      <div style="background:#ffffff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="font-size:14px;color:#475569;margin:0 0 16px;">Hi ${appointment.patient.user.name},</p>
+        <p style="font-size:14px;color:#1a1a1a;margin:0 0 16px;">We regret to inform you that your upcoming appointment has been cancelled because <strong>Dr. ${appointment.doctor.user.name}</strong> is no longer available at our clinic.</p>
+        <div style="background:#fef2f2;padding:16px;border-radius:8px;border:1px solid #fecaca;margin-bottom:16px;">
+          <p style="margin:0 0 8px;font-size:13px;"><strong>Doctor:</strong> Dr. ${appointment.doctor.user.name}</p>
+          <p style="margin:0;font-size:13px;"><strong>Original Date &amp; Time:</strong> ${time}</p>
+        </div>
+        <p style="font-size:14px;color:#1a1a1a;margin:0 0 8px;">Please log in to book a new appointment with another available doctor.</p>
+        <p style="font-size:13px;color:#64748b;margin:0;">We apologise for the inconvenience.</p>
+      </div>
+    </div>`,
+    appointment.id
+  );
+};
+
+export const sendDoctorWelcomeEmail = async (doctorEmail: string, doctorName: string, tempPassword: string): Promise<void> => {
+  await sendEmail(
+    doctorEmail,
+    'Welcome to HealthCare – Your Account is Ready',
+    `<div style="max-width:600px;margin:0 auto;font-family:sans-serif;">
+      <div style="background:#0ea5e9;padding:20px 24px;border-radius:8px 8px 0 0;">
+        <h2 style="color:#fff;margin:0;font-size:18px;">Welcome to HealthCare</h2>
+      </div>
+      <div style="background:#ffffff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="font-size:14px;color:#475569;margin:0 0 16px;">Hi Dr. ${doctorName},</p>
+        <p style="font-size:14px;color:#1a1a1a;margin:0 0 16px;">Your doctor account has been created on the HealthCare Appointment Manager platform. You can now log in to view and manage your appointments.</p>
+        <div style="background:#f0f9ff;padding:16px;border-radius:8px;border:1px solid #bae6fd;margin-bottom:16px;">
+          <p style="margin:0 0 8px;font-size:13px;"><strong>Login Email:</strong> ${doctorEmail}</p>
+          <p style="margin:0;font-size:13px;"><strong>Temporary Password:</strong> <code style="background:#e0f2fe;padding:2px 6px;border-radius:4px;font-size:13px;">${tempPassword}</code></p>
+        </div>
+        <p style="font-size:13px;color:#64748b;margin:0;">Please change your password after your first login.</p>
+      </div>
+    </div>`
+  );
+};
+
+export const sendDoctorRemovalEmail = async (doctorEmail: string, doctorName: string, appointmentCount: number): Promise<void> => {
+  await sendEmail(
+    doctorEmail,
+    'Your Account Has Been Removed – HealthCare',
+    `<div style="max-width:600px;margin:0 auto;font-family:sans-serif;">
+      <div style="background:#64748b;padding:20px 24px;border-radius:8px 8px 0 0;">
+        <h2 style="color:#fff;margin:0;font-size:18px;">Account Removed</h2>
+      </div>
+      <div style="background:#ffffff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="font-size:14px;color:#475569;margin:0 0 16px;">Hi Dr. ${doctorName},</p>
+        <p style="font-size:14px;color:#1a1a1a;margin:0 0 16px;">Your doctor profile has been removed from the HealthCare Appointment Manager platform by an administrator.</p>
+        ${appointmentCount > 0 ? `<div style="background:#fff7ed;padding:16px;border-radius:8px;border:1px solid #fed7aa;margin-bottom:16px;"><p style="margin:0;font-size:13px;color:#92400e;"><strong>${appointmentCount} upcoming appointment(s)</strong> have been cancelled and affected patients have been notified.</p></div>` : ''}
+        <p style="font-size:13px;color:#64748b;margin:0;">If you believe this was done in error, please contact the clinic administration.</p>
+      </div>
+    </div>`
+  );
+};
+
 export const sendMedicationReminder = async (
   patientEmail: string,
   patientName: string,

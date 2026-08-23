@@ -1,7 +1,12 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from '../utils/prisma';
-import { sendAppointmentCancellationDueToLeave } from '../services/email.service';
+import {
+  sendAppointmentCancellationDueToLeave,
+  sendAppointmentCancellationDueToRemoval,
+  sendDoctorWelcomeEmail,
+  sendDoctorRemovalEmail,
+} from '../services/email.service';
 
 const str = (v: string | string[]): string => Array.isArray(v) ? v[0] : v;
 
@@ -38,6 +43,10 @@ export const createDoctor = async (req: Request, res: Response): Promise<void> =
   });
 
   const { password: _pw, ...safeUser } = user;
+
+  // Send welcome email to new doctor
+  sendDoctorWelcomeEmail(email, name, password || 'Doctor@123').catch(console.error);
+
   res.status(201).json({ success: true, data: safeUser });
 };
 
@@ -131,7 +140,10 @@ export const deleteDoctor = async (req: Request, res: Response): Promise<void> =
   const doctorId = str(req.params.doctorId);
 
   try {
-    const doctor = await prisma.doctor.findUnique({ where: { id: doctorId } });
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorId },
+      include: { user: { select: { id: true, email: true, name: true } } },
+    });
     if (!doctor) {
       res.status(404).json({ success: false, message: 'Doctor not found' });
       return;
@@ -156,7 +168,7 @@ export const deleteDoctor = async (req: Request, res: Response): Promise<void> =
       (a: any) => ['PENDING', 'CONFIRMED'].includes(a.status) && new Date(a.scheduledAt) >= new Date()
     );
     for (const appt of upcoming) {
-      sendAppointmentCancellationDueToLeave(appt).catch(console.error);
+      sendAppointmentCancellationDueToRemoval(appt).catch(console.error);
     }
 
     // Delete everything in strict dependency order (deepest children first)
@@ -172,6 +184,10 @@ export const deleteDoctor = async (req: Request, res: Response): Promise<void> =
     await prisma.appointment.deleteMany({ where: { doctorId } });
     await prisma.leaveDay.deleteMany({ where: { doctorId } });
     await prisma.doctorAvailability.deleteMany({ where: { doctorId } });
+
+    // Email the doctor before deleting their record
+    sendDoctorRemovalEmail(doctor.user.email, doctor.user.name, upcoming.length).catch(console.error);
+
     await prisma.doctor.delete({ where: { id: doctorId } });
     await prisma.user.delete({ where: { id: doctor.userId } });
 
