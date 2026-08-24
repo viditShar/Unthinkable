@@ -3,12 +3,15 @@ import prisma from '../utils/prisma';
 import { marked } from 'marked';
 
 // Lazy — reads env vars at call time, not at module load
-const getTransporter = () => nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: false,
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-});
+const getTransporter = () => {
+  const port = Number(process.env.SMTP_PORT) || 465;
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port,
+    secure: port === 465,  // true for 465 (SSL), false for 587 (TLS)
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
+};
 
 // Convert markdown to styled HTML for emails
 const mdToHtml = (text: string): string => {
