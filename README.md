@@ -4,18 +4,25 @@ A full-stack healthcare appointment platform with separate portals for patients,
 
 ---
 
+## 🌐 Hosted Application
+
+> **Frontend:** _[Add your Vercel URL here]_
+> **Backend API:** _[Add your Render URL here]_
+
+---
+
 ## Tech Stack
 
 | Layer      | Technology                                      |
 |------------|-------------------------------------------------|
 | Backend    | Node.js, Express, TypeScript                    |
-| Database   | PostgreSQL + Prisma ORM (v7)                    |
+| Database   | PostgreSQL + Prisma ORM (v6)                    |
 | Frontend   | React 19, TypeScript, Vite, Tailwind CSS v4     |
 | Auth       | JWT (role-based: patient / doctor / admin)      |
-| LLM        | OpenAI GPT-3.5-turbo                            |
-| Email      | Nodemailer (Gmail SMTP)                         |
+| LLM        | Google Gemini 3.6 Flash                         |
+| Email      | Nodemailer (Gmail SMTP) with DB retry queue     |
 | Calendar   | Google Calendar API (OAuth 2.0)                 |
-| Jobs       | node-cron                                       |
+| Jobs       | node-cron (background tasks)                    |
 
 ---
 
@@ -25,31 +32,79 @@ A full-stack healthcare appointment platform with separate portals for patients,
 healthcare-app/
 ├── backend/
 │   ├── prisma/
-│   │   ├── schema.prisma       # DB schema
-│   │   └── seed.ts             # Seed admin + sample doctor
+│   │   ├── schema.prisma
+│   │   └── seed.ts
 │   ├── src/
-│   │   ├── controllers/        # Route handlers
-│   │   ├── middleware/         # Auth middleware
-│   │   ├── routes/             # Express routers
-│   │   ├── services/           # LLM, Email, Calendar, Reminders
-│   │   ├── jobs/               # Cron jobs
-│   │   ├── utils/              # Prisma client, JWT
+│   │   ├── controllers/     # auth, admin, doctor, patient, appointment
+│   │   ├── middleware/      # JWT auth, role authorization
+│   │   ├── routes/          # Express routers
+│   │   ├── services/        # LLM, Email, Calendar, Reminders
+│   │   ├── jobs/            # Cron jobs
+│   │   ├── utils/           # Prisma client, JWT helpers
 │   │   ├── app.ts
 │   │   └── server.ts
 │   ├── .env.example
-│   └── prisma.config.ts
+│   └── tsconfig.json
 ├── frontend/
 │   ├── src/
-│   │   ├── api/                # Axios instance
-│   │   ├── context/            # Auth context
-│   │   ├── components/         # Layout, ProtectedRoute
+│   │   ├── api/             # Axios instance
+│   │   ├── components/      # Layout, ProtectedRoute, RescheduleModal
+│   │   ├── context/         # AuthContext, ThemeContext
 │   │   └── pages/
-│   │       ├── admin/          # Dashboard, ManageDoctors, CreateDoctor
-│   │       ├── doctor/         # Dashboard, Appointments, PostVisitForm
-│   │       └── patient/        # Dashboard, SearchDoctors, BookAppointment, Appointments, Detail
+│   │       ├── admin/       # Dashboard, ManageDoctors, CreateDoctor
+│   │       ├── doctor/      # Dashboard, Appointments, AppointmentDetail, PostVisitForm
+│   │       └── patient/     # Dashboard, SearchDoctors, BookAppointment, Appointments, AppointmentDetail
 │   └── .env.example
+├── README.md
 └── SYSTEM_DESIGN.md
 ```
+
+---
+
+## Features
+
+### Patient Portal
+- Register, log in, and manage profile
+- Search doctors by specialisation or name
+- 3-step booking: pick slot → symptom form → confirm
+- View appointments with AI pre-visit summary, urgency level
+- Reschedule or cancel confirmed appointments
+- Post-visit: AI patient-friendly summary + prescription
+
+### Doctor Portal
+- View today's schedule with urgency indicators
+- Pre-Visit Briefing: patient symptoms, AI summary, 3 suggested questions
+- Submit post-visit notes and prescription
+- AI generates patient-friendly post-visit summary
+- Reschedule appointments
+
+### Admin Portal
+- Create doctor profiles (specialisation, working hours, slot duration)
+- Add/remove leave days — auto-cancels affected bookings, notifies patients
+- Remove doctors — cancels all upcoming bookings, deletes calendar events
+- View stats dashboard
+
+### Notifications
+- Booking confirmation (patient + doctor)
+- Reschedule notification (patient + doctor) with old/new time
+- Cancellation (patient + doctor)
+- Doctor on leave cancellation (patient)
+- Doctor removed cancellation (patient + doctor)
+- Post-visit summary email (patient, markdown rendered)
+- Medication reminders via email (frequency-aware)
+
+### Google Calendar
+- Event created on booking (both patient and doctor as attendees)
+- Event deleted on cancellation
+- Old event deleted + new event created on reschedule
+- Post-visit event updated with clinical summary
+- Recurring medication reminder events per prescription item
+- Doctor removal cleans up all calendar events before DB deletion
+
+### AI (Gemini 3.6 Flash)
+- Pre-visit: urgency level (LOW/MEDIUM/HIGH), chief complaint, 3 suggested questions
+- Post-visit: patient-friendly summary with medication schedule and follow-up steps
+- Graceful fallback — system never breaks if AI is unavailable
 
 ---
 
@@ -57,7 +112,7 @@ healthcare-app/
 
 ### Prerequisites
 - Node.js v18+
-- PostgreSQL running locally (or a cloud instance)
+- PostgreSQL (local or [Neon](https://neon.tech) free cloud)
 - npm v9+
 
 ### 1. Clone and install
@@ -75,21 +130,12 @@ npm install
 ### 2. Configure environment variables
 
 ```bash
-# Backend
 cd backend
 cp .env.example .env
-# Edit .env with your actual values
+# Fill in all values — see .env.example for instructions
 ```
 
-Key values to set:
-- `DATABASE_URL` — your PostgreSQL connection string
-- `JWT_SECRET` — any long random string
-- `SMTP_USER` / `SMTP_PASS` — Gmail address + [App Password](https://myaccount.google.com/apppasswords)
-- `OPENAI_API_KEY` — from https://platform.openai.com
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` — see Google Calendar Setup below
-
 ```bash
-# Frontend
 cd frontend
 cp .env.example .env
 # Set VITE_API_URL to your backend URL
@@ -100,27 +146,27 @@ cp .env.example .env
 ```bash
 cd backend
 npx prisma migrate dev --name init
-npm run db:seed
+npx tsx prisma/seed.ts
 ```
 
-This creates:
+Seed creates:
 - Admin: `admin@healthcare.com` / `Admin@123`
-- Sample doctor: `dr.smith@healthcare.com` / `Doctor@123`
+- Sample doctor: `dr.smith@healthcare.com` / `Doctor@123` ← change after first login
 
 ### 4. Run development servers
 
 ```bash
-# Terminal 1 — Backend
+# Terminal 1 — backend
 cd backend
 npm run dev
 
-# Terminal 2 — Frontend
+# Terminal 2 — frontend
 cd frontend
 npm run dev
 ```
 
-- Backend runs on: http://localhost:5000
-- Frontend runs on: http://localhost:5173
+- Backend: http://localhost:5000
+- Frontend: http://localhost:5173
 
 ---
 
@@ -137,17 +183,17 @@ npm run dev
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/doctors?specialisation=&name=` | Search doctors |
-| GET | `/api/doctors/:doctorId` | Get doctor details |
-| GET | `/api/doctors/:doctorId/slots?date=YYYY-MM-DD` | Get available slots |
+| GET | `/api/doctors/:doctorId` | Doctor details |
+| GET | `/api/doctors/:doctorId/slots?date=YYYY-MM-DD` | Available slots |
 
 ### Appointments (authenticated)
-| Method | Endpoint | Description | Role |
-|--------|----------|-------------|------|
-| POST | `/api/appointments/hold` | Hold a slot (10 min) | PATIENT |
-| POST | `/api/appointments/confirm` | Confirm booking + symptoms | PATIENT |
-| GET | `/api/appointments/:id` | Get appointment detail | Any |
-| PATCH | `/api/appointments/:id/cancel` | Cancel appointment | Patient/Doctor/Admin |
-| PATCH | `/api/appointments/:id/reschedule` | Reschedule | PATIENT |
+| Method | Endpoint | Role | Description |
+|--------|----------|------|-------------|
+| POST | `/api/appointments/hold` | Patient | Hold slot (10 min) |
+| POST | `/api/appointments/confirm` | Patient | Confirm + symptom form |
+| GET | `/api/appointments/:id` | Any | View appointment |
+| PATCH | `/api/appointments/:id/cancel` | Patient/Doctor/Admin | Cancel |
+| PATCH | `/api/appointments/:id/reschedule` | Patient/Doctor | Reschedule |
 
 ### Patient
 | Method | Endpoint | Description |
@@ -160,7 +206,7 @@ npm run dev
 |--------|----------|-------------|
 | GET | `/api/doctors/me/appointments` | My appointments |
 | PUT | `/api/doctors/me/profile` | Update profile |
-| POST | `/api/doctors/me/appointments/:id/post-visit` | Submit notes + prescription |
+| POST | `/api/doctors/me/appointments/:id/post-visit` | Submit notes |
 
 ### Admin
 | Method | Endpoint | Description |
@@ -168,28 +214,27 @@ npm run dev
 | GET | `/api/admin/stats` | Dashboard stats |
 | POST | `/api/admin/doctors` | Create doctor |
 | GET | `/api/admin/doctors` | List all doctors |
-| PUT | `/api/admin/doctors/:doctorId` | Update doctor |
-| POST | `/api/admin/doctors/:doctorId/leave` | Add leave day |
-| DELETE | `/api/admin/doctors/:doctorId/leave/:leaveId` | Remove leave day |
-| GET | `/api/admin/patients` | List all patients |
+| PUT | `/api/admin/doctors/:id` | Update doctor |
+| DELETE | `/api/admin/doctors/:id` | Remove doctor |
+| POST | `/api/admin/doctors/:id/leave` | Add leave day |
+| DELETE | `/api/admin/doctors/:id/leave/:leaveId` | Remove leave day |
 
 ---
 
 ## DB Schema
 
-Key models and relationships:
-
 ```
 User (id, email, password, name, phone, role)
   ├── Patient (userId, dateOfBirth, bloodGroup, allergies)
-  │     └── Appointment[] 
+  │     └── Appointment[]
   └── Doctor (userId, specialisation, workingHours, slotDurationMins)
         ├── Appointment[]
         └── LeaveDay[]
 
-Appointment (patientId, doctorId, scheduledAt, status, symptoms,
-             preVisitSummary, urgencyLevel, chiefComplaint,
+Appointment (patientId, doctorId, scheduledAt, status,
+             symptoms, preVisitSummary, urgencyLevel, chiefComplaint, suggestedQuestions,
              doctorNotes, prescription, postVisitSummary,
+             patientCalendarEventId, doctorCalendarEventId,
              holdToken, holdExpiresAt)
   ├── EmailNotification[]
   └── MedicationReminder[]
@@ -199,26 +244,24 @@ Appointment (patientId, doctorId, scheduledAt, status, symptoms,
 
 ## LLM Prompts
 
-### Pre-visit summary
+### Pre-visit
 ```
-Analyse these symptoms and return a JSON object with:
-- urgencyLevel: "LOW", "MEDIUM", or "HIGH"
-- chiefComplaint: a brief one-sentence chief complaint
-- suggestedQuestions: an array of exactly 3 questions the doctor should ask
-- summary: a 2-3 sentence clinical pre-visit summary
-
+Analyse these symptoms and return ONLY a valid JSON object:
+{
+  "urgencyLevel": "LOW" | "MEDIUM" | "HIGH",
+  "chiefComplaint": "...",
+  "suggestedQuestions": ["...", "...", "..."],
+  "summary": "..."
+}
 Symptoms: <symptoms>
 ```
 
-### Post-visit summary
+### Post-visit
 ```
-Convert these clinical notes into a patient-friendly summary with medication
-schedule and follow-up steps.
-
+Convert these clinical notes into a clear, patient-friendly summary
+with medication schedule and follow-up steps.
 Doctor Notes: <notes>
 Prescription: <prescription>
-
-Include: diagnosis, medication schedule, follow-up steps, warnings.
 ```
 
 ---
@@ -226,27 +269,28 @@ Include: diagnosis, medication schedule, follow-up steps, warnings.
 ## Google Calendar Setup
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create a project → Enable **Google Calendar API**
+2. Create project → Enable **Google Calendar API**
 3. Create **OAuth 2.0 Client ID** (Web application)
-4. Add authorized redirect URI: `http://localhost:5000/api/calendar/callback`
-5. Copy **Client ID** and **Client Secret** to `.env`
-6. Visit `GET /api/calendar/auth` → opens Google OAuth URL
-7. Authorize → you'll be redirected to `/api/calendar/callback`
-8. The response contains `tokens.refresh_token` — copy it to `.env` as `GOOGLE_REFRESH_TOKEN`
+4. Add redirect URI: `http://localhost:5000/api/calendar/callback`
+5. Add Client ID + Secret to `.env`
+6. Start backend → visit `http://localhost:5000/api/calendar/auth` as Admin
+7. Authorize → copy `refresh_token` from response to `.env` as `GOOGLE_REFRESH_TOKEN`
 
 ---
 
 ## Deployment
 
-### Backend (Render)
+### Backend → Render.com
 1. Push to GitHub
-2. Create a new **Web Service** on [Render](https://render.com)
-3. Build command: `npm install && npx prisma generate && npx tsc`
-4. Start command: `node dist/server.js`
-5. Add all `.env` variables in Render's environment settings
-6. Add a **PostgreSQL** database on Render and update `DATABASE_URL`
+2. New **Web Service** on [Render](https://render.com)
+3. Build: `npm install && npx prisma generate && npm run build`
+4. Start: `node dist/server.js`
+5. Add all `.env` variables in Render settings
+6. Add Render PostgreSQL → update `DATABASE_URL`
 
-### Frontend (Vercel)
-1. Import the `frontend/` folder into [Vercel](https://vercel.com)
+### Frontend → Vercel.com
+1. Import `frontend/` at [Vercel](https://vercel.com)
 2. Set `VITE_API_URL` to your Render backend URL
 3. Deploy
+
+> After deploying, update the hosted links at the top of this README.
