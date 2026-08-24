@@ -253,6 +253,7 @@ export const rescheduleAppointment = async (req: AuthRequest, res: Response): Pr
   }
 
   const oldCalendarEventId = appointment.patientCalendarEventId;
+  const oldDoctorCalendarEventId = appointment.doctorCalendarEventId;
 
   const updated = await prisma.appointment.update({
     where: { id: appointmentId },
@@ -272,7 +273,11 @@ export const rescheduleAppointment = async (req: AuthRequest, res: Response): Pr
   sendRescheduleEmail(updated, oldTime).catch(console.error);
 
   // Delete old calendar event and create a new one
-  replaceCalendarEvent({ ...updated, patientCalendarEventId: oldCalendarEventId }).catch(console.error);
+  replaceCalendarEvent({
+    ...updated,
+    patientCalendarEventId: oldCalendarEventId,
+    doctorCalendarEventId: oldDoctorCalendarEventId,
+  }).catch(console.error);
 
   res.json({ success: true, data: updated });
 };

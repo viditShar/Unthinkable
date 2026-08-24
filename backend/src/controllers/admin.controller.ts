@@ -161,6 +161,8 @@ export const deleteDoctor = async (req: Request, res: Response): Promise<void> =
         id: true,
         status: true,
         scheduledAt: true,
+        patientCalendarEventId: true,
+        doctorCalendarEventId: true,
         patient: { include: { user: true } },
         doctor: { include: { user: true } },
       },
@@ -168,12 +170,20 @@ export const deleteDoctor = async (req: Request, res: Response): Promise<void> =
 
     const appointmentIds = appointments.map((a: any) => a.id);
 
-    // Notify patients with upcoming bookings before wiping data
+    // Notify patients with upcoming bookings and delete calendar events before wiping data
     const upcoming = appointments.filter(
       (a: any) => ['PENDING', 'CONFIRMED'].includes(a.status) && new Date(a.scheduledAt) >= new Date()
     );
     for (const appt of upcoming) {
       sendAppointmentCancellationDueToRemoval(appt).catch(console.error);
+    }
+
+    // Delete all calendar events for all appointments of this doctor (await — must happen before DB deletion)
+    const { deleteCalendarEvent } = await import('../services/calendar.service');
+    for (const appt of appointments) {
+      if (appt.patientCalendarEventId || appt.doctorCalendarEventId) {
+        await deleteCalendarEvent(appt).catch(console.error);
+      }
     }
 
     // Delete everything in strict dependency order (deepest children first)

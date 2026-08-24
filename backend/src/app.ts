@@ -28,30 +28,6 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/test-ai', async (_req, res) => {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) {
-    res.status(500).json({ success: false, error: 'GEMINI_API_KEY is not set in .env' });
-    return;
-  }
-
-  try {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(key);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
-    const response = await model.generateContent('Say hello in one word');
-    const text = response.response.text();
-    res.json({ success: true, keyPrefix: key.substring(0, 8) + '...', response: text });
-  } catch (err: any) {
-    res.status(500).json({
-      success: false,
-      keyPrefix: key.substring(0, 8) + '...',
-      error: err.message,
-      details: err?.status || err?.code || 'unknown',
-    });
-  }
-});
-
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);
   res.status(err.status || 500).json({
