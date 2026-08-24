@@ -8,6 +8,9 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
 ].filter(Boolean) as string[];
 
+// Pattern to allow all Vercel preview deployments for this project
+const vercelPreviewPattern = /^https:\/\/unthinkable-.*\.vercel\.app$/;
+
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
 import doctorRoutes from './routes/doctor.routes';
@@ -19,12 +22,10 @@ const app = express();
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
-    if (!origin) {
-      callback(null, true);
-      return;
-    }
-    const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed));
+    if (!origin) { callback(null, true); return; }
+    const isAllowed =
+      allowedOrigins.some(allowed => origin === allowed) ||
+      vercelPreviewPattern.test(origin);
     if (isAllowed) {
       callback(null, true);
     } else {
