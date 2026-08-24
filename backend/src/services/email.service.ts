@@ -236,6 +236,53 @@ export const sendDoctorRemovalEmail = async (doctorEmail: string, doctorName: st
   );
 };
 
+export const sendRescheduleEmail = async (appointment: any, oldTime: Date): Promise<void> => {
+  const { name: patientName, email: patientEmail } = appointment.patient.user;
+  const { name: doctorName, email: doctorEmail } = appointment.doctor.user;
+  const oldTimeStr = formatDate(oldTime);
+  const newTimeStr = formatDate(appointment.scheduledAt);
+
+  await sendEmail(
+    patientEmail,
+    'Appointment Rescheduled 🔄',
+    `<div style="max-width:600px;margin:0 auto;font-family:sans-serif;">
+      <div style="background:#8b5cf6;padding:20px 24px;border-radius:8px 8px 0 0;">
+        <h2 style="color:#fff;margin:0;font-size:18px;">Appointment Rescheduled</h2>
+      </div>
+      <div style="background:#ffffff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="font-size:14px;color:#475569;margin:0 0 16px;">Hi ${patientName},</p>
+        <p style="font-size:14px;color:#1a1a1a;margin:0 0 16px;">Your appointment with <strong>Dr. ${doctorName}</strong> has been rescheduled.</p>
+        <div style="background:#f5f3ff;padding:16px;border-radius:8px;border:1px solid #ddd6fe;margin-bottom:12px;">
+          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;text-decoration:line-through;"><strong>Previous:</strong> ${oldTimeStr}</p>
+          <p style="margin:0;font-size:14px;font-weight:600;color:#5b21b6;"><strong>New Time:</strong> ${newTimeStr}</p>
+        </div>
+        <p style="font-size:13px;color:#64748b;margin:0;">A new calendar invite has been sent. Please update your schedule accordingly.</p>
+      </div>
+    </div>`,
+    appointment.id
+  );
+
+  await sendEmail(
+    doctorEmail,
+    'Appointment Rescheduled 🔄',
+    `<div style="max-width:600px;margin:0 auto;font-family:sans-serif;">
+      <div style="background:#8b5cf6;padding:20px 24px;border-radius:8px 8px 0 0;">
+        <h2 style="color:#fff;margin:0;font-size:18px;">Appointment Rescheduled</h2>
+      </div>
+      <div style="background:#ffffff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;">
+        <p style="font-size:14px;color:#475569;margin:0 0 16px;">Hi Dr. ${doctorName},</p>
+        <p style="font-size:14px;color:#1a1a1a;margin:0 0 16px;">Your appointment with <strong>${patientName}</strong> has been rescheduled.</p>
+        <div style="background:#f5f3ff;padding:16px;border-radius:8px;border:1px solid #ddd6fe;margin-bottom:12px;">
+          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;text-decoration:line-through;"><strong>Previous:</strong> ${oldTimeStr}</p>
+          <p style="margin:0;font-size:14px;font-weight:600;color:#5b21b6;"><strong>New Time:</strong> ${newTimeStr}</p>
+        </div>
+        <p style="font-size:13px;color:#64748b;margin:0;">The calendar invite has been updated automatically.</p>
+      </div>
+    </div>`,
+    appointment.id
+  );
+};
+
 export const sendMedicationReminder = async (
   patientEmail: string,
   patientName: string,

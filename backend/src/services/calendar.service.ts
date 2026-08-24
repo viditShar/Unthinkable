@@ -175,19 +175,33 @@ export const updateCalendarEvent = async (appointment: any): Promise<void> => {
 
 export const deleteCalendarEvent = async (appointment: any): Promise<void> => {
   if (!process.env.GOOGLE_REFRESH_TOKEN) return;
-  if (!appointment.patientCalendarEventId) return;
 
-  try {
-    const calendar = getServiceCalendar();
-    await calendar.events.delete({
-      calendarId: 'primary',
-      eventId: appointment.patientCalendarEventId,
-      sendUpdates: 'all',
-    });
-    console.log(`[Calendar] Event deleted: ${appointment.patientCalendarEventId}`);
-  } catch (err: any) {
-    console.error('[Calendar] deleteCalendarEvent failed:', err?.message || err);
+  const calendar = getServiceCalendar();
+
+  const deleteById = async (eventId: string) => {
+    try {
+      await calendar.events.delete({ calendarId: 'primary', eventId, sendUpdates: 'all' });
+      console.log(`[Calendar] Event deleted: ${eventId}`);
+    } catch (err: any) {
+      console.error('[Calendar] deleteCalendarEvent failed:', err?.message || err);
+    }
+  };
+
+  if (appointment.patientCalendarEventId) await deleteById(appointment.patientCalendarEventId);
+  if (appointment.doctorCalendarEventId)  await deleteById(appointment.doctorCalendarEventId);
+};
+
+// Delete old event and create a new one for rescheduled appointments
+export const replaceCalendarEvent = async (appointment: any): Promise<void> => {
+  if (!process.env.GOOGLE_REFRESH_TOKEN) return;
+
+  // Delete old event first
+  if (appointment.patientCalendarEventId) {
+    await deleteCalendarEvent(appointment);
   }
+
+  // Create fresh event with new time
+  await createCalendarEvent(appointment);
 };
 
 // Creates recurring calendar events for each medication in the prescription

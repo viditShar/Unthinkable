@@ -161,7 +161,16 @@ export const getDoctorAppointments = async (req: AuthRequest, res: Response): Pr
     orderBy: { scheduledAt: 'asc' },
   });
 
-  res.json({ success: true, data: appointments });
+  // Attach the doctor's own profile to each appointment so frontend has doctorId and slotDurationMins
+  const result = appointments.map((appt: any) => ({
+    ...appt,
+    doctor: {
+      id: doctorProfile.id,
+      slotDurationMins: doctorProfile.slotDurationMins,
+    },
+  }));
+
+  res.json({ success: true, data: result });
 };
 
 // Doctor submits post-visit notes

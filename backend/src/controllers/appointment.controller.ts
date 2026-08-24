@@ -3,8 +3,8 @@ import { randomBytes } from 'crypto';
 import prisma from '../utils/prisma';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { generatePreVisitSummary } from '../services/llm.service';
-import { sendBookingConfirmation, sendCancellationEmail } from '../services/email.service';
-import { createCalendarEvent, deleteCalendarEvent } from '../services/calendar.service';
+import { sendBookingConfirmation, sendCancellationEmail, sendRescheduleEmail } from '../services/email.service';
+import { createCalendarEvent, deleteCalendarEvent, replaceCalendarEvent } from '../services/calendar.service';
 
 const str = (v: string | string[]): string => Array.isArray(v) ? v[0] : v;
 
@@ -196,14 +196,37 @@ export const rescheduleAppointment = async (req: AuthRequest, res: Response): Pr
   const appointmentId = str(req.params.appointmentId);
   const { newScheduledAt } = req.body;
 
-  const appointment = await prisma.appointment.findUnique({ where: { id: appointmentId } });
+  const appointment = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+    include: {
+      patient: { include: { user: true } },
+      doctor: { include: { user: true } },
+    },
+  });
+
   if (!appointment) {
     res.status(404).json({ success: false, message: 'Appointment not found' });
     return;
   }
 
-  const newTime = new Date(newScheduledAt);
+  // Only patient or doctor involved can reschedule
+  const patientProfile = await prisma.patient.findUnique({ where: { userId: req.user!.userId } });
+  const doctorProfile  = await prisma.doctor.findUnique({ where: { userId: req.user!.userId } });
 
+  const isOwner =
+    (patientProfile && appointment.patientId === patientProfile.id) ||
+    (doctorProfile && appointment.doctorId === doctorProfile.id) ||
+    req.user!.role === 'ADMIN';
+
+  if (!isOwner) {
+    res.status(403).json({ success: false, message: 'Not authorized to reschedule this appointment' });
+    return;
+  }
+
+  const newTime = new Date(newScheduledAt);
+  const oldTime = new Date(appointment.scheduledAt);
+
+  // Check new slot availability
   const conflict = await prisma.appointment.findFirst({
     where: {
       doctorId: appointment.doctorId,
@@ -218,17 +241,38 @@ export const rescheduleAppointment = async (req: AuthRequest, res: Response): Pr
     return;
   }
 
+  // Check doctor leave on new date
+  const newLeaveDate = new Date(newTime);
+  newLeaveDate.setUTCHours(0, 0, 0, 0);
+  const leave = await prisma.leaveDay.findUnique({
+    where: { doctorId_date: { doctorId: appointment.doctorId, date: newLeaveDate } },
+  });
+  if (leave) {
+    res.status(409).json({ success: false, message: 'Doctor is on leave on the new date.' });
+    return;
+  }
+
+  const oldCalendarEventId = appointment.patientCalendarEventId;
+
   const updated = await prisma.appointment.update({
     where: { id: appointmentId },
-    data: { scheduledAt: newTime, status: 'CONFIRMED' },
+    data: {
+      scheduledAt: newTime,
+      status: 'CONFIRMED',
+      patientCalendarEventId: null,
+      doctorCalendarEventId: null,
+    },
     include: {
       patient: { include: { user: true } },
       doctor: { include: { user: true } },
     },
   });
 
-  const { updateCalendarEvent } = await import('../services/calendar.service');
-  updateCalendarEvent(updated).catch(console.error);
+  // Send reschedule emails to both parties
+  sendRescheduleEmail(updated, oldTime).catch(console.error);
+
+  // Delete old calendar event and create a new one
+  replaceCalendarEvent({ ...updated, patientCalendarEventId: oldCalendarEventId }).catch(console.error);
 
   res.json({ success: true, data: updated });
 };
@@ -246,7 +290,7 @@ export const getAppointment = async (req: AuthRequest, res: Response): Promise<v
           id: true,
           specialisation: true,
           slotDurationMins: true,
-          user: { select: { name: true, email: true } },
+          user: { select: { id: true, name: true, email: true } },
         },
       },
     },

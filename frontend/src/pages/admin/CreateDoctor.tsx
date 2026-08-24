@@ -43,7 +43,8 @@ const CreateDoctor = () => {
     if (!form.name.trim()) e.name = 'Name is required'
     if (!form.email.trim()) e.email = 'Email is required'
     else if (!emailRegex.test(form.email)) e.email = 'Invalid email address'
-    if (form.password && form.password.length < 6) e.password = 'Minimum 6 characters'
+    if (!form.password) e.password = 'Password is required'
+    else if (form.password.length < 6) e.password = 'Minimum 6 characters'
     if (!form.specialisation.trim()) e.specialisation = 'Specialisation is required'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -97,11 +98,8 @@ const CreateDoctor = () => {
               <input type="text" value={form.phone} onChange={e => set('phone', e.target.value)} className="input" placeholder="+91 98765 43210" />
             </Field>
             <div style={{ gridColumn: '1 / -1' }}>
-              <Field label="Password — optional, defaults to Doctor@123" error={errors.password}>
-                <input type="password" value={form.password} onChange={e => { set('password', e.target.value); clearErr('password') }} className="input" style={inputStyle(!!errors.password)} placeholder="Leave blank to use default" />
-                {!errors.password && form.password.length > 0 && form.password.length < 6 && (
-                  <p style={{ fontSize: 12, color: 'var(--warning)', marginTop: 4 }}>⚠ Must be at least 6 characters</p>
-                )}
+              <Field label="Password *" error={errors.password}>
+                <input type="password" value={form.password} onChange={e => { set('password', e.target.value); clearErr('password') }} className="input" style={inputStyle(!!errors.password)} placeholder="At least 6 characters" />
               </Field>
             </div>
           </div>

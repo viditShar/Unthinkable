@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import api from '../../api/axios'
 import { format } from 'date-fns'
-import { Calendar, AlertTriangle, ChevronRight } from 'lucide-react'
+import { Calendar, AlertTriangle, ChevronRight, RefreshCw } from 'lucide-react'
+import RescheduleModal from '../../components/RescheduleModal'
 
 const urgencyStyle: Record<string, { bg: string; color: string }> = {
   LOW:    { bg: 'var(--success-bg)', color: 'var(--success)' },
@@ -19,6 +20,7 @@ const statusClass: Record<string, string> = {
 }
 
 const DoctorAppointments = () => {
+  const [rescheduleAppt, setRescheduleAppt] = useState<any | null>(null)
   const [filter, setFilter] = useState('')
 
   const { data, isLoading } = useQuery({
@@ -83,6 +85,13 @@ const DoctorAppointments = () => {
                     <span className={statusClass[appt.status] || 'badge badge-gray'}>{appt.status}</span>
                     {appt.status === 'CONFIRMED' && (
                       <>
+                        <button
+                          onClick={() => setRescheduleAppt(appt)}
+                          className="btn btn-ghost"
+                          style={{ padding: '6px 12px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
+                        >
+                          <RefreshCw size={11} /> Reschedule
+                        </button>
                         <Link to={`/doctor/appointments/${appt.id}/detail`} className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
                           Pre-Visit Briefing
                         </Link>
@@ -102,6 +111,15 @@ const DoctorAppointments = () => {
             )
           })}
         </div>
+      )}
+
+      {rescheduleAppt && (
+        <RescheduleModal
+          appointmentId={rescheduleAppt.id}
+          doctorId={rescheduleAppt.doctor?.id || rescheduleAppt.doctorId}
+          onClose={() => setRescheduleAppt(null)}
+          onSuccess={() => setRescheduleAppt(null)}
+        />
       )}
     </div>
   )

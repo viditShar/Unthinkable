@@ -1,10 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import api from '../../api/axios'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
-import { Calendar, User, AlertTriangle, FileText, ChevronLeft, X } from 'lucide-react'
+import { Calendar, User, AlertTriangle, FileText, ChevronLeft, X, RefreshCw } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
+import RescheduleModal from '../../components/RescheduleModal'
 
 const urgencyStyle: Record<string, { bg: string; color: string }> = {
   LOW:    { bg: 'var(--success-bg)', color: 'var(--success)' },
@@ -16,6 +18,7 @@ const AppointmentDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [showReschedule, setShowReschedule] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['appointment', id],
@@ -49,11 +52,29 @@ const AppointmentDetail = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Appointment Details</h1>
         {['CONFIRMED', 'PENDING'].includes(appt.status) && (
-          <button onClick={handleCancel} className="btn btn-danger" style={{ padding: '7px 14px', fontSize: 13 }}>
-            <X size={13} /> Cancel
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => setShowReschedule(true)}
+              className="btn btn-ghost"
+              style={{ padding: '7px 14px', fontSize: 13 }}
+            >
+              <RefreshCw size={13} /> Reschedule
+            </button>
+            <button onClick={handleCancel} className="btn btn-danger" style={{ padding: '7px 14px', fontSize: 13 }}>
+              <X size={13} /> Cancel
+            </button>
+          </div>
         )}
       </div>
+
+      {showReschedule && (
+        <RescheduleModal
+          appointmentId={appt.id}
+          doctorId={appt.doctor.id}
+          onClose={() => setShowReschedule(false)}
+          onSuccess={() => setShowReschedule(false)}
+        />
+      )}
 
       {/* Info card */}
       <div className="card" style={{ padding: 20, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>

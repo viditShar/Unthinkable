@@ -24,7 +24,10 @@ export const getMyAppointments = async (req: AuthRequest, res: Response): Promis
     where,
     include: {
       doctor: {
-        include: {
+        select: {
+          id: true,
+          specialisation: true,
+          slotDurationMins: true,
           user: { select: { name: true, email: true } },
         },
       },

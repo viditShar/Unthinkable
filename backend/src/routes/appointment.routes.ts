@@ -13,6 +13,6 @@ router.post('/hold', authorize('PATIENT'), holdSlot);
 router.post('/confirm', authorize('PATIENT'), confirmBooking);
 router.get('/:appointmentId', getAppointment);
 router.patch('/:appointmentId/cancel', cancelAppointment);
-router.patch('/:appointmentId/reschedule', authorize('PATIENT'), rescheduleAppointment);
+router.patch('/:appointmentId/reschedule', rescheduleAppointment);
 
 export default router;

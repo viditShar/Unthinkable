@@ -20,7 +20,12 @@ export const createDoctor = async (req: Request, res: Response): Promise<void> =
     return;
   }
 
-  const hashedPassword = await bcrypt.hash(password || 'Doctor@123', 12);
+  if (!password || password.length < 6) {
+    res.status(400).json({ success: false, message: 'Password is required and must be at least 6 characters' });
+    return;
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.create({
     data: {
@@ -45,7 +50,7 @@ export const createDoctor = async (req: Request, res: Response): Promise<void> =
   const { password: _pw, ...safeUser } = user;
 
   // Send welcome email to new doctor
-  sendDoctorWelcomeEmail(email, name, password || 'Doctor@123').catch(console.error);
+  sendDoctorWelcomeEmail(email, name, password).catch(console.error);
 
   res.status(201).json({ success: true, data: safeUser });
 };
