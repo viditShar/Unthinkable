@@ -1,6 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://unthinkable-psi.vercel.app',
+  process.env.FRONTEND_URL,
+].filter(Boolean) as string[];
+
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
 import doctorRoutes from './routes/doctor.routes';
@@ -11,7 +18,19 @@ import calendarRoutes from './routes/calendar.routes';
 const app = express();
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    const isAllowed = allowedOrigins.some(allowed => origin === allowed || origin.startsWith(allowed));
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin '${origin}' not allowed`));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());
